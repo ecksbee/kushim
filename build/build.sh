@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-package_name='telefacts-taxononmy-package'
+package_name='kushim'
 
 platforms=("linux/amd64" "linux/386" "windows/amd64" "windows/386" "darwin/amd64")
 
@@ -13,7 +13,7 @@ do
         output_name+='.exe'
     fi
 
-    env GOOS=$GOOS GOARCH=$GOARCH go build -o $output_name ../cmd/telefacts-taxonomy-package/main.go
+    env GOOS=$GOOS GOARCH=$GOARCH go build -o $output_name ../cmd/kushim/main.go
     if [ $? -ne 0 ]; then
         echo 'Error!'
         exit 1

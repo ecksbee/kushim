@@ -3,8 +3,8 @@ package install
 import (
 	"io/ioutil"
 
-	"ecksbee.com/telefacts-taxonomy-package/internal/actions"
-	"ecksbee.com/telefacts-taxonomy-package/pkg/taxonomies"
+	"ecksbee.com/kushim/internal/actions"
+	"ecksbee.com/kushim/pkg/taxonomies"
 	"ecksbee.com/telefacts/pkg/serializables"
 )
 

@@ -9,7 +9,7 @@ import (
 	"path"
 	"sync"
 
-	"ecksbee.com/telefacts-taxonomy-package/pkg/taxonomies"
+	"ecksbee.com/kushim/pkg/taxonomies"
 	"ecksbee.com/telefacts/pkg/attr"
 	"ecksbee.com/telefacts/pkg/serializables"
 	gocache "github.com/patrickmn/go-cache"

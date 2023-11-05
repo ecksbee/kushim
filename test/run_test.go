@@ -7,9 +7,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"ecksbee.com/telefacts-taxonomy-package/pkg/install"
-	"ecksbee.com/telefacts-taxonomy-package/pkg/taxonomies"
-	"ecksbee.com/telefacts-taxonomy-package/pkg/throttle"
+	"ecksbee.com/kushim/pkg/install"
+	"ecksbee.com/kushim/pkg/taxonomies"
+	"ecksbee.com/kushim/pkg/throttle"
 )
 
 func Test_Run_USGAAP2020(t *testing.T) {

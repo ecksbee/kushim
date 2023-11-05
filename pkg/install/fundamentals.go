@@ -1,7 +1,7 @@
 package install
 
 import (
-	"ecksbee.com/telefacts-taxonomy-package/internal/actions"
+	"ecksbee.com/kushim/internal/actions"
 	"ecksbee.com/telefacts/pkg/attr"
 	"ecksbee.com/telefacts/pkg/serializables"
 )

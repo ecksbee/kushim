@@ -7,7 +7,7 @@ import (
 	"path"
 	"strings"
 
-	"ecksbee.com/telefacts-taxonomy-package/internal/actions"
+	"ecksbee.com/kushim/internal/actions"
 	"ecksbee.com/telefacts/pkg/attr"
 	"golang.org/x/net/html/charset"
 )

@@ -11,10 +11,10 @@ import (
 	"path"
 	"time"
 
-	"ecksbee.com/telefacts-taxonomy-package/internal/cache"
-	"ecksbee.com/telefacts-taxonomy-package/internal/web"
-	"ecksbee.com/telefacts-taxonomy-package/pkg/install"
-	"ecksbee.com/telefacts-taxonomy-package/pkg/throttle"
+	"ecksbee.com/kushim/internal/cache"
+	"ecksbee.com/kushim/internal/web"
+	"ecksbee.com/kushim/pkg/install"
+	"ecksbee.com/kushim/pkg/throttle"
 	"ecksbee.com/telefacts/pkg/serializables"
 )
 
@@ -73,7 +73,7 @@ func setupServer() *http.Server {
 	cache.InitRepo(serializables.GlobalTaxonomySetPath)
 	r := web.NewRouter()
 
-	fmt.Println("telefacts-ns-mgr<-0.0.0.0:8080")
+	fmt.Println("kushim<-0.0.0.0:8080")
 	return &http.Server{
 		Addr:         "0.0.0.0:8080",
 		WriteTimeout: time.Second * 15,

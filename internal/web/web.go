@@ -4,7 +4,7 @@ import (
 	"net/http"
 	neturl "net/url"
 
-	"ecksbee.com/telefacts-taxonomy-package/internal/cache"
+	"ecksbee.com/kushim/internal/cache"
 	"github.com/gorilla/mux"
 )
 

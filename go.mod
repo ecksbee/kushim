@@ -1,4 +1,4 @@
-module ecksbee.com/telefacts-taxonomy-package
+module ecksbee.com/kushim
 
 go 1.16
 

@@ -4,7 +4,7 @@ import (
 	"archive/zip"
 	"path"
 
-	"ecksbee.com/telefacts-taxonomy-package/internal/actions"
+	"ecksbee.com/kushim/internal/actions"
 )
 
 var (

@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"ecksbee.com/telefacts-taxonomy-package/internal/actions"
+	"ecksbee.com/kushim/internal/actions"
 	"ecksbee.com/telefacts/pkg/attr"
 	"ecksbee.com/telefacts/pkg/serializables"
 	"github.com/joshuanario/r8lmt"
