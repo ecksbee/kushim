@@ -192,6 +192,9 @@ func throttle(urlString string) {
 }
 
 func DiscoverRemoteURL(url string) {
+	if VolumePath == "" {
+		return
+	}
 	dest, err := serializables.UrlToFilename(url)
 	if err != nil {
 		return
