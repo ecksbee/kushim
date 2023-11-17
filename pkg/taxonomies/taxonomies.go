@@ -11,7 +11,8 @@ import (
 )
 
 var (
-	VolumePath string
+	indexingMode bool
+	VolumePath   string
 )
 
 type Meta struct {

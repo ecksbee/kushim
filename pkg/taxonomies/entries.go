@@ -3,38 +3,23 @@ package taxonomies
 import (
 	"encoding/xml"
 	"fmt"
-	"net/url"
 	"os"
 	"path/filepath"
 	"sync"
-	"time"
 
 	"ecksbee.com/kushim/internal/actions"
+	"ecksbee.com/kushim/pkg/throttle"
 	"ecksbee.com/telefacts/pkg/attr"
 	"ecksbee.com/telefacts/pkg/serializables"
-	"github.com/joshuanario/r8lmt"
 )
 
-var (
-	wLock     sync.Mutex
-	out       chan interface{} = make(chan interface{})
-	in        chan interface{} = make(chan interface{})
-	dur       time.Duration    = 200 * time.Millisecond
-	throttled bool             = false
-)
-
-func startSECThrottle() {
-	if !throttled {
-		r8lmt.Throttler(out, in, dur, false)
-		throttled = true
-	}
-}
+var wLock sync.Mutex
 
 func Discover(entries []string) error {
 	if VolumePath == "" {
 		return fmt.Errorf("empty VolumePath")
 	}
-	startSECThrottle()
+	throttle.StartSECThrottle()
 	serializables.GlobalTaxonomySetPath = VolumePath
 	for _, entry := range entries {
 		url, err := serializables.UrlToFilename(entry)
@@ -179,19 +164,8 @@ func ImportSchema(file *serializables.SchemaFile) {
 	wg.Wait()
 }
 
-func throttle(urlString string) {
-	urlStruct, err := url.Parse(urlString)
-	if urlStruct.Hostname() != "sec.gov" {
-		return
-	}
-	if err != nil {
-		return
-	}
-	in <- struct{}{}
-	<-out
-}
-
 func DiscoverRemoteURL(url string) {
+	serializables.GlobalTaxonomySetPath = VolumePath
 	dest, err := serializables.UrlToFilename(url)
 	if err != nil {
 		return
@@ -203,7 +177,7 @@ func DiscoverRemoteURL(url string) {
 		if err != nil {
 			return
 		}
-		body, err := actions.Scrape(url, throttle)
+		body, err := actions.Scrape(url, throttle.Throttle)
 		if err != nil {
 			return
 		}
