@@ -1,13 +1,16 @@
 package librarian
 
 import (
+	"encoding/json"
 	"encoding/xml"
 	"fmt"
 	"path"
 	"sync"
+	"time"
 
 	"ecksbee.com/telefacts/pkg/attr"
 	"ecksbee.com/telefacts/pkg/hydratables"
+	"ecksbee.com/telefacts/pkg/renderables"
 	"ecksbee.com/telefacts/pkg/serializables"
 )
 
@@ -16,23 +19,44 @@ var (
 	entries      []string
 	lock         sync.RWMutex
 	superH       hydratables.Hydratable
-	// pgridMap     map[string]renderables.PGrid
-	// cgridMap     map[string]renderables.CGrid
-	// dgridMap     map[string]renderables.DGrid
 )
 
 func init() {
 	entries = make([]string, 0)
+	nowisforever := time.Now().UTC().Format("2006-01-02")
 	superH = hydratables.Hydratable{
+		Instances: map[string]hydratables.Instance{
+			"ecksbee_" + nowisforever + ".xml": hydratables.Instance{
+				Contexts: []hydratables.Context{
+					hydratables.Context{
+						ID: "ctx",
+						Period: struct {
+							Instant  hydratables.Instant
+							Duration hydratables.Duration
+						}{
+							Instant: hydratables.Instant{
+								CharData: nowisforever,
+							},
+						},
+						Entity: hydratables.Entity{
+							Identifier: struct {
+								Scheme   string
+								CharData string
+							}{
+								Scheme:   "https://ecksbee.com",
+								CharData: "kushim",
+							},
+						},
+					},
+				},
+			},
+		},
 		Schemas:               make(map[string]hydratables.Schema),
 		LabelLinkbases:        make(map[string]hydratables.LabelLinkbase),
 		PresentationLinkbases: make(map[string]hydratables.PresentationLinkbase),
 		DefinitionLinkbases:   make(map[string]hydratables.DefinitionLinkbase),
 		CalculationLinkbases:  make(map[string]hydratables.CalculationLinkbase),
 	}
-	// pgridMap = make(map[string]renderables.PGrid)
-	// cgridMap = make(map[string]renderables.CGrid)
-	// dgridMap = make(map[string]renderables.DGrid)
 }
 
 func BuildIndex(entry string) {
@@ -45,6 +69,13 @@ func ProcessIndex() {
 	for _, entry := range entries {
 		processEntry(entry)
 	}
+	bytes, err := renderables.MarshalCatalog(&superH)
+	if err != nil {
+		return
+	}
+	var catalog renderables.Catalog
+	json.Unmarshal(bytes, &catalog)
+	fmt.Printf("%d", len(catalog.RelationshipSets))
 }
 
 func processEntry(entry string) error {
