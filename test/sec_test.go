@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"ecksbee.com/kushim/pkg/install"
+	"ecksbee.com/kushim/pkg/librarian"
 )
 
 func Test_InstallSECTaxonomies(t *testing.T) {
@@ -13,10 +14,11 @@ func Test_InstallSECTaxonomies(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
+	librarian.IndexingMode = true
 	gts := filepath.Join(wd, "gts")
 	err = install.InstallSECTaxonomies(gts)
 	if err != nil {
 		t.Fatal(err)
 	}
+	librarian.ProcessIndex()
 }

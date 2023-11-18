@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"ecksbee.com/kushim/internal/actions"
+	"ecksbee.com/kushim/pkg/librarian"
 	"ecksbee.com/kushim/pkg/throttle"
 	"ecksbee.com/telefacts/pkg/attr"
 	"ecksbee.com/telefacts/pkg/serializables"
@@ -32,6 +33,9 @@ func Discover(entries []string) error {
 		}
 		if schemaFile == nil {
 			continue
+		}
+		if librarian.IndexingMode {
+			go librarian.BuildIndex(entry)
 		}
 		var wg sync.WaitGroup
 		wg.Add(3)
@@ -191,6 +195,9 @@ func DiscoverRemoteURL(url string) {
 	discoveredSchema, err := serializables.ReadSchemaFile(dest)
 	if err != nil {
 		return
+	}
+	if librarian.IndexingMode {
+		go librarian.BuildIndex(url)
 	}
 	var wwg sync.WaitGroup
 	wwg.Add(2)
