@@ -169,6 +169,9 @@ func ImportSchema(file *serializables.SchemaFile) {
 }
 
 func DiscoverRemoteURL(url string) {
+	if VolumePath == "" {
+		return
+	}
 	serializables.GlobalTaxonomySetPath = VolumePath
 	dest, err := serializables.UrlToFilename(url)
 	if err != nil {
