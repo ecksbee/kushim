@@ -5,13 +5,16 @@ import (
 	"encoding/xml"
 	"fmt"
 	"path"
+	"path/filepath"
 	"sync"
 	"time"
 
 	"ecksbee.com/telefacts/pkg/attr"
+	"ecksbee.com/telefacts/pkg/cache"
 	"ecksbee.com/telefacts/pkg/hydratables"
 	"ecksbee.com/telefacts/pkg/renderables"
 	"ecksbee.com/telefacts/pkg/serializables"
+	gocache "github.com/patrickmn/go-cache"
 )
 
 var (
@@ -66,6 +69,13 @@ func BuildIndex(entry string) {
 }
 
 func ProcessIndex() {
+	appCache := cache.NewCache(false)
+	appCache.Set("names.json", map[string]map[string]string{
+		"https://ecksbee.com": map[string]string{
+			"kushim": "kushim - XBRL Taxonomy Package Manager",
+		},
+	}, gocache.DefaultExpiration)
+	hydratables.InjectCache(appCache)
 	for _, entry := range entries {
 		processEntry(entry)
 	}
@@ -75,7 +85,21 @@ func ProcessIndex() {
 	}
 	var catalog renderables.Catalog
 	json.Unmarshal(bytes, &catalog)
+	schemedEntity := stringify(&catalog.Subjects[0].Entity)
+	fmt.Println(schemedEntity)
 	fmt.Printf("%d", len(catalog.RelationshipSets))
+	rsetMap := catalog.Networks[schemedEntity]
+	for roleUri, slug := range rsetMap {
+		bytes2, err := renderables.MarshalRenderable(slug, &superH)
+		if err != nil {
+			return
+		}
+		var viewModel renderables.Renderable
+		json.Unmarshal(bytes2, &viewModel)
+		fmt.Println(roleUri)
+		fmt.Printf("%v", viewModel)
+		//todo persist in a file gts/<slug>.json
+	}
 }
 
 func processEntry(entry string) error {
@@ -109,7 +133,8 @@ func processEntry(entry string) error {
 			if attr.IsValidUrl(schemaLocationAttr.Value) {
 				newentry = schemaLocationAttr.Value
 			} else {
-				return
+				myDir := filepath.Dir(entry)
+				newentry = path.Join(myDir, schemaLocationAttr.Value)
 			}
 			err = processEntry(newentry)
 		}(item)
@@ -131,7 +156,8 @@ func processEntry(entry string) error {
 			if attr.IsValidUrl(schemaLocationAttr.Value) {
 				newentry = schemaLocationAttr.Value
 			} else {
-				return
+				myDir := filepath.Dir(entry)
+				newentry = path.Join(myDir, schemaLocationAttr.Value)
 			}
 			err = processEntry(newentry)
 		}(item)
