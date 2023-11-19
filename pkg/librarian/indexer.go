@@ -96,6 +96,9 @@ func ProcessIndex() {
 		}
 		var viewModel renderables.Renderable
 		json.Unmarshal(bytes2, &viewModel)
+		if len(viewModel.PGrid.IndentedLabels) <= 0 {
+			continue
+		}
 		fmt.Println(roleUri)
 		fmt.Printf("%v", viewModel)
 		//todo persist in a file gts/<slug>.json
@@ -114,8 +117,9 @@ func processEntry(entry string) error {
 	if schemaFile == nil {
 		return fmt.Errorf("no schema")
 	}
+	processEmbeddedLinkbaseFile(urlPath, schemaFile, entry)
 	processSchema(schemaFile, entry)
-	processLinkbases(schemaFile, entry)
+	processLinkbaseFileRefs(schemaFile, entry)
 	imports := schemaFile.Import
 	var wg sync.WaitGroup
 	wg.Add(len(imports))
@@ -166,8 +170,7 @@ func processEntry(entry string) error {
 	return err
 }
 
-func processLinkbases(schemaFile *serializables.SchemaFile, entry string) {
-	var wg sync.WaitGroup
+func processLinkbaseFileRefs(schemaFile *serializables.SchemaFile, entry string) {
 	for _, annotation := range schemaFile.Annotation {
 		if annotation.XMLName.Space != attr.XSD {
 			continue
@@ -176,98 +179,91 @@ func processLinkbases(schemaFile *serializables.SchemaFile, entry string) {
 			if appinfo.XMLName.Space != attr.XSD {
 				continue
 			}
-			for _, iitem := range appinfo.LinkbaseRef {
-				wg.Add(1)
-				go func(item struct {
-					XMLName  xml.Name
-					XMLAttrs []xml.Attr "xml:\",any,attr\""
-				}) {
-					defer wg.Done()
-					if item.XMLName.Space != attr.LINK {
+			for _, item := range appinfo.LinkbaseRef {
+				if item.XMLName.Space != attr.LINK {
+					return
+				}
+				arcroleAttr := attr.FindAttr(item.XMLAttrs, "arcrole")
+				if arcroleAttr == nil || arcroleAttr.Name.Space != attr.XLINK || arcroleAttr.Value != attr.LINKARCROLE {
+					return
+				}
+				typeAttr := attr.FindAttr(item.XMLAttrs, "type")
+				if typeAttr == nil || typeAttr.Name.Space != attr.XLINK || typeAttr.Value != "simple" {
+					return
+				}
+				roleAttr := attr.FindAttr(item.XMLAttrs, "role")
+				if roleAttr == nil || roleAttr.Name.Space != attr.XLINK || roleAttr.Value == "" {
+					return
+				}
+				hrefAttr := attr.FindAttr(item.XMLAttrs, "href")
+				if hrefAttr == nil || hrefAttr.Name.Space != attr.XLINK || hrefAttr.Value == "" {
+					return
+				}
+				if attr.IsValidUrl(hrefAttr.Value) {
+					go serializables.DiscoverGlobalFile(hrefAttr.Value)
+					return
+				}
+				filepath := path.Join(serializables.GlobalTaxonomySetPath, hrefAttr.Value)
+				switch roleAttr.Value {
+				case attr.PresentationLinkbaseRef:
+					discoveredPre, err := serializables.ReadPresentationLinkbaseFile(filepath)
+					if err != nil {
 						return
 					}
-					arcroleAttr := attr.FindAttr(item.XMLAttrs, "arcrole")
-					if arcroleAttr == nil || arcroleAttr.Name.Space != attr.XLINK || arcroleAttr.Value != attr.LINKARCROLE {
+					presentationLinkbase, err := hydratables.HydratePresentationLinkbase(discoveredPre, filepath)
+					if err != nil {
 						return
 					}
-					typeAttr := attr.FindAttr(item.XMLAttrs, "type")
-					if typeAttr == nil || typeAttr.Name.Space != attr.XLINK || typeAttr.Value != "simple" {
+					lock.Lock()
+					superH.PresentationLinkbases[filepath] = *presentationLinkbase
+					lock.Unlock()
+					break
+				case attr.DefinitionLinkbaseRef:
+					discoveredDef, err := serializables.ReadDefinitionLinkbaseFile(filepath)
+					if err != nil {
 						return
 					}
-					roleAttr := attr.FindAttr(item.XMLAttrs, "role")
-					if roleAttr == nil || roleAttr.Name.Space != attr.XLINK || roleAttr.Value == "" {
+					definitionLinkbase, err := hydratables.HydrateDefinitionLinkbase(discoveredDef, filepath)
+					if err != nil {
 						return
 					}
-					hrefAttr := attr.FindAttr(item.XMLAttrs, "href")
-					if hrefAttr == nil || hrefAttr.Name.Space != attr.XLINK || hrefAttr.Value == "" {
+					lock.Lock()
+					superH.DefinitionLinkbases[filepath] = *definitionLinkbase
+					lock.Unlock()
+					break
+				case attr.CalculationLinkbaseRef:
+					discoveredCal, err := serializables.ReadCalculationLinkbaseFile(filepath)
+					if err != nil {
 						return
 					}
-					if attr.IsValidUrl(hrefAttr.Value) {
-						go serializables.DiscoverGlobalFile(hrefAttr.Value)
+					calculationLinkbase, err := hydratables.HydrateCalculationLinkbase(discoveredCal, filepath)
+					if err != nil {
 						return
 					}
-					filepath := path.Join(serializables.GlobalTaxonomySetPath, hrefAttr.Value)
-					switch roleAttr.Value {
-					case attr.PresentationLinkbaseRef:
-						discoveredPre, err := serializables.ReadPresentationLinkbaseFile(filepath)
-						if err != nil {
-							return
-						}
-						presentationLinkbase, err := hydratables.HydratePresentationLinkbase(discoveredPre, filepath)
-						if err != nil {
-							return
-						}
-						lock.Lock()
-						superH.PresentationLinkbases[filepath] = *presentationLinkbase
-						lock.Unlock()
-						break
-					case attr.DefinitionLinkbaseRef:
-						discoveredDef, err := serializables.ReadDefinitionLinkbaseFile(filepath)
-						if err != nil {
-							return
-						}
-						definitionLinkbase, err := hydratables.HydrateDefinitionLinkbase(discoveredDef, filepath)
-						if err != nil {
-							return
-						}
-						lock.Lock()
-						superH.DefinitionLinkbases[filepath] = *definitionLinkbase
-						lock.Unlock()
-						break
-					case attr.CalculationLinkbaseRef:
-						discoveredCal, err := serializables.ReadCalculationLinkbaseFile(filepath)
-						if err != nil {
-							return
-						}
-						calculationLinkbase, err := hydratables.HydrateCalculationLinkbase(discoveredCal, filepath)
-						if err != nil {
-							return
-						}
-						lock.Lock()
-						superH.CalculationLinkbases[filepath] = *calculationLinkbase
-						lock.Unlock()
-						break
-					case attr.LabelLinkbaseRef:
-						discoveredLab, err := serializables.ReadLabelLinkbaseFile(filepath)
-						if err != nil {
-							return
-						}
-						labelLinkbase, err := hydratables.HydrateLabelLinkbase(discoveredLab, filepath)
-						if err != nil {
-							return
-						}
-						lock.Lock()
-						superH.LabelLinkbases[filepath] = *labelLinkbase
-						lock.Unlock()
-						break
-					default:
-						break
+					lock.Lock()
+					superH.CalculationLinkbases[filepath] = *calculationLinkbase
+					lock.Unlock()
+					break
+				case attr.LabelLinkbaseRef:
+					discoveredLab, err := serializables.ReadLabelLinkbaseFile(filepath)
+					if err != nil {
+						return
 					}
-				}(iitem)
+					labelLinkbase, err := hydratables.HydrateLabelLinkbase(discoveredLab, filepath)
+					if err != nil {
+						return
+					}
+					lock.Lock()
+					superH.LabelLinkbases[filepath] = *labelLinkbase
+					lock.Unlock()
+					break
+				default:
+					break
+				}
+
 			}
 		}
 	}
-	wg.Wait()
 }
 
 func processSchema(schemaFile *serializables.SchemaFile, entry string) {
