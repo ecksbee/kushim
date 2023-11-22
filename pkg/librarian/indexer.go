@@ -28,6 +28,16 @@ func init() {
 	entries = make([]string, 0)
 	nowisforever := time.Now().UTC().Format("2006-01-02")
 	superH = hydratables.Hydratable{
+		Folder: &serializables.Folder{
+			EntryFileName:         "kushim.xsd",
+			Namespaces:            make(map[string]string),
+			Instances:             make(map[string]serializables.InstanceFile),
+			Schemas:               make(map[string]serializables.SchemaFile),
+			PresentationLinkbases: make(map[string]serializables.PresentationLinkbaseFile),
+			DefinitionLinkbases:   make(map[string]serializables.DefinitionLinkbaseFile),
+			CalculationLinkbases:  make(map[string]serializables.CalculationLinkbaseFile),
+			LabelLinkbases:        make(map[string]serializables.LabelLinkbaseFile),
+		},
 		Instances: map[string]hydratables.Instance{
 			"ecksbee_" + nowisforever + ".xml": hydratables.Instance{
 				Contexts: []hydratables.Context{
@@ -77,7 +87,7 @@ func ProcessIndex() {
 	}, gocache.DefaultExpiration)
 	hydratables.InjectCache(appCache)
 	for _, entry := range entries {
-		processEntry(entry)
+		processEntry(entry, entry)
 	}
 	bytes, err := renderables.MarshalCatalog(&superH)
 	if err != nil {
@@ -105,8 +115,8 @@ func ProcessIndex() {
 	}
 }
 
-func processEntry(entry string) error {
-	urlPath, err := serializables.UrlToFilename(entry)
+func processEntry(trueEntry string, virtualEntry string) error {
+	urlPath, err := serializables.UrlToFilename(trueEntry)
 	if err != nil {
 		return err
 	}
@@ -117,9 +127,9 @@ func processEntry(entry string) error {
 	if schemaFile == nil {
 		return fmt.Errorf("no schema")
 	}
-	processEmbeddedLinkbaseFile(urlPath, schemaFile, entry)
-	processSchema(schemaFile, entry)
-	processLinkbaseFileRefs(schemaFile, entry)
+	processEmbeddedLinkbaseFile(urlPath, schemaFile, virtualEntry)
+	processSchema(schemaFile, virtualEntry)
+	processLinkbaseFileRefs(schemaFile, virtualEntry)
 	imports := schemaFile.Import
 	var wg sync.WaitGroup
 	wg.Add(len(imports))
@@ -134,13 +144,20 @@ func processEntry(entry string) error {
 				return
 			}
 			newentry := ""
+			myDir := filepath.Dir(trueEntry)
 			if attr.IsValidUrl(schemaLocationAttr.Value) {
 				newentry = schemaLocationAttr.Value
 			} else {
-				myDir := filepath.Dir(entry)
 				newentry = path.Join(myDir, schemaLocationAttr.Value)
 			}
-			err = processEntry(newentry)
+			namespaceAttr := attr.FindAttr(iitem.XMLAttrs, "namespace")
+			if namespaceAttr == nil || namespaceAttr.Value == "" {
+				return
+			}
+			lock.Lock()
+			superH.Folder.Namespaces[namespaceAttr.Value] = schemaLocationAttr.Value
+			lock.Unlock()
+			err = processEntry(newentry, schemaLocationAttr.Value)
 		}(item)
 	}
 	wg.Wait()
@@ -157,13 +174,20 @@ func processEntry(entry string) error {
 				return
 			}
 			newentry := ""
+			myDir := filepath.Dir(trueEntry)
 			if attr.IsValidUrl(schemaLocationAttr.Value) {
 				newentry = schemaLocationAttr.Value
 			} else {
-				myDir := filepath.Dir(entry)
 				newentry = path.Join(myDir, schemaLocationAttr.Value)
 			}
-			err = processEntry(newentry)
+			targetNS := attr.FindAttr(iitem.XMLAttrs, "targetNamespace")
+			if targetNS == nil || targetNS.Value == "" {
+				return
+			}
+			lock.Lock()
+			superH.Folder.Namespaces[targetNS.Value] = schemaLocationAttr.Value
+			lock.Unlock()
+			err = processEntry(newentry, schemaLocationAttr.Value)
 		}(item)
 	}
 	wg.Wait()
@@ -214,8 +238,10 @@ func processLinkbaseFileRefs(schemaFile *serializables.SchemaFile, entry string)
 					if err != nil {
 						return
 					}
+					presentationLinkbase = reroutePresentationLocs(presentationLinkbase, entry, filepath)
 					lock.Lock()
 					superH.PresentationLinkbases[filepath] = *presentationLinkbase
+					superH.Folder.PresentationLinkbases[filepath] = *discoveredPre
 					lock.Unlock()
 					break
 				case attr.DefinitionLinkbaseRef:
@@ -227,8 +253,10 @@ func processLinkbaseFileRefs(schemaFile *serializables.SchemaFile, entry string)
 					if err != nil {
 						return
 					}
+					definitionLinkbase = rerouteDefinitionLocs(definitionLinkbase, entry, filepath)
 					lock.Lock()
 					superH.DefinitionLinkbases[filepath] = *definitionLinkbase
+					superH.Folder.DefinitionLinkbases[filepath] = *discoveredDef
 					lock.Unlock()
 					break
 				case attr.CalculationLinkbaseRef:
@@ -240,8 +268,10 @@ func processLinkbaseFileRefs(schemaFile *serializables.SchemaFile, entry string)
 					if err != nil {
 						return
 					}
+					calculationLinkbase = rerouteCalculationLocs(calculationLinkbase, entry, filepath)
 					lock.Lock()
 					superH.CalculationLinkbases[filepath] = *calculationLinkbase
+					superH.Folder.CalculationLinkbases[filepath] = *discoveredCal
 					lock.Unlock()
 					break
 				case attr.LabelLinkbaseRef:
@@ -253,8 +283,10 @@ func processLinkbaseFileRefs(schemaFile *serializables.SchemaFile, entry string)
 					if err != nil {
 						return
 					}
+					labelLinkbase = rerouteLabelLocs(labelLinkbase, entry, filepath)
 					lock.Lock()
 					superH.LabelLinkbases[filepath] = *labelLinkbase
+					superH.Folder.LabelLinkbases[filepath] = *discoveredLab
 					lock.Unlock()
 					break
 				default:
@@ -273,5 +305,6 @@ func processSchema(schemaFile *serializables.SchemaFile, entry string) {
 	}
 	lock.Lock()
 	superH.Schemas[entry] = *hydratedSchema
+	superH.Folder.Schemas[entry] = *schemaFile
 	lock.Unlock()
 }
