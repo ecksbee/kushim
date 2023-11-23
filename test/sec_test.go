@@ -7,6 +7,7 @@ import (
 
 	"ecksbee.com/kushim/pkg/install"
 	"ecksbee.com/kushim/pkg/librarian"
+	"ecksbee.com/kushim/pkg/taxonomies"
 )
 
 func Test_InstallSECTaxonomies(t *testing.T) {
@@ -20,5 +21,5 @@ func Test_InstallSECTaxonomies(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	librarian.ProcessIndex()
+	librarian.ProcessIndex(taxonomies.VolumePath)
 }

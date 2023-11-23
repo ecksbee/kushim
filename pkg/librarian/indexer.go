@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"ecksbee.com/kushim/internal/actions"
 	"ecksbee.com/telefacts/pkg/attr"
 	"ecksbee.com/telefacts/pkg/cache"
 	"ecksbee.com/telefacts/pkg/hydratables"
@@ -78,7 +79,7 @@ func BuildIndex(entry string) {
 	lock.Unlock()
 }
 
-func ProcessIndex() {
+func ProcessIndex(gts string) {
 	appCache := cache.NewCache(false)
 	appCache.Set("names.json", map[string]map[string]string{
 		"https://ecksbee.com": map[string]string{
@@ -99,20 +100,17 @@ func ProcessIndex() {
 	fmt.Println(schemedEntity)
 	fmt.Printf("%d", len(catalog.RelationshipSets))
 	rsetMap := catalog.Networks[schemedEntity]
-	for roleUri, slug := range rsetMap {
+	for _, slug := range rsetMap {
 		bytes2, err := renderables.MarshalRenderable(slug, &superH)
 		if err != nil {
 			return
 		}
-		var viewModel renderables.Renderable
-		json.Unmarshal(bytes2, &viewModel)
-		if len(viewModel.PGrid.IndentedLabels) <= 0 {
-			continue
-		}
-		fmt.Println(roleUri)
-		fmt.Printf("%v", viewModel)
-		//todo persist in a file gts/<slug>.json
+		dest := path.Join(gts, slug+".json")
+		actions.WriteFile(dest, bytes2)
 	}
+	dest := path.Join(gts, "_.json")
+	data, _ := json.Marshal(catalog)
+	actions.WriteFile(dest, data)
 }
 
 func processEntry(trueEntry string, virtualEntry string) error {

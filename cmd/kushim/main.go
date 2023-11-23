@@ -14,6 +14,7 @@ import (
 	"ecksbee.com/kushim/internal/cache"
 	"ecksbee.com/kushim/internal/web"
 	"ecksbee.com/kushim/pkg/install"
+	"ecksbee.com/kushim/pkg/taxonomies"
 	"ecksbee.com/kushim/pkg/throttle"
 	"ecksbee.com/telefacts/pkg/serializables"
 )
@@ -58,6 +59,7 @@ func setupServer() *http.Server {
 		gts = dir
 	}
 	serializables.GlobalTaxonomySetPath = path.Join(gts, "gts")
+	taxonomies.VolumePath = serializables.GlobalTaxonomySetPath
 	cache.InitRepo(serializables.GlobalTaxonomySetPath)
 	r := web.NewRouter()
 
