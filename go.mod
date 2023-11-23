@@ -2,8 +2,7 @@ module ecksbee.com/kushim
 
 go 1.16
 
-//replace ecksbee.com/telefacts => github.com/ecksbee/telefacts v0.0.0-20231113
-replace ecksbee.com/telefacts => /Users/joshuanario/Documents/GitHub/telefacts
+replace ecksbee.com/telefacts => github.com/ecksbee/telefacts v0.0.0-20231122
 
 require (
 	ecksbee.com/telefacts v0.0.0
