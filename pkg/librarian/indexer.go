@@ -322,13 +322,10 @@ func processSchema(schemaFile *serializables.SchemaFile, entry string) {
 
 func processElement(concept *hydratables.Concept, source string) {
 	href := source + "#" + concept.ID
-	lock.RLock()
-	namespace := superH.Folder.Namespaces[source]
-	lock.RUnlock()
 	card := myrenderables.ConceptCard{
 		Source:            source,
 		ID:                concept.ID,
-		Namespace:         namespace,
+		Namespace:         concept.XMLName.Space,
 		Name:              concept.XMLName.Local,
 		SubstitutionGroup: concept.SubstitutionGroup.Local,
 		PeriodType:        concept.PeriodType,
