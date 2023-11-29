@@ -2,6 +2,7 @@ package cache
 
 import (
 	"io/ioutil"
+	"net/url"
 	"path"
 	"sync"
 
@@ -38,6 +39,27 @@ func MarshalCatalog() ([]byte, error) {
 		lock.Lock()
 		defer lock.Unlock()
 		appCache.Set("_kushim", data, gocache.DefaultExpiration)
+	}()
+	return data, err
+}
+
+func MarshalConceptCard(href string) ([]byte, error) {
+	lock.RLock()
+	if x, found := appCache.Get(href); found {
+		ret := x.([]byte)
+		lock.RUnlock()
+		return ret, nil
+	}
+	lock.RUnlock()
+	target := path.Join(taxonomies.VolumePath, url.QueryEscape(href)+".json")
+	data, err := ioutil.ReadFile(target)
+	if err != nil {
+		return nil, err
+	}
+	go func() {
+		lock.Lock()
+		defer lock.Unlock()
+		appCache.Set(href, data, gocache.DefaultExpiration)
 	}()
 	return data, err
 }

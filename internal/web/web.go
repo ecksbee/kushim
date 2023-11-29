@@ -26,6 +26,29 @@ func Catalog() func(http.ResponseWriter, *http.Request) {
 	}
 }
 
+func ConceptCard() func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "Error: incorrect verb, "+r.Method, http.StatusInternalServerError)
+			return
+		}
+		href := r.URL.Query().Get("href")
+
+		if len(href) <= 0 {
+			http.Error(w, "Error: invalid href", http.StatusBadRequest)
+			return
+		}
+		data, err := cache.MarshalConceptCard(href)
+		if err != nil {
+			http.Error(w, "Error: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(data)
+	}
+}
+
 func Renderable() func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
@@ -52,9 +75,8 @@ func Renderable() func(http.ResponseWriter, *http.Request) {
 
 func NewRouter() http.Handler {
 	r := mux.NewRouter()
-	packageRoute := r.PathPrefix("/packages").Subrouter()
-	packageRoute.HandleFunc("/", Catalog()).Methods("GET")
-	packageRoute.HandleFunc("/{hash}", Renderable()).Methods("GET")
+	r.Path("/concepts").HandlerFunc(ConceptCard()).Methods("GET")
+	r.Path("/packages/{hash}").HandlerFunc(Renderable()).Methods("GET")
 	wd, err := os.Getwd()
 	if err != nil {
 		panic(err)
