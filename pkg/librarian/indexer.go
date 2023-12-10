@@ -4,12 +4,14 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	"fmt"
+	"net/url"
 	"path"
 	"path/filepath"
 	"sync"
 	"time"
 
 	"ecksbee.com/kushim/internal/actions"
+	myrenderables "ecksbee.com/kushim/pkg/renderables"
 	"ecksbee.com/telefacts/pkg/attr"
 	"ecksbee.com/telefacts/pkg/cache"
 	"ecksbee.com/telefacts/pkg/hydratables"
@@ -23,9 +25,11 @@ var (
 	entries      []string
 	lock         sync.RWMutex
 	superH       hydratables.Hydratable
+	cards        map[string]myrenderables.ConceptCard
 )
 
 func init() {
+	cards = make(map[string]myrenderables.ConceptCard)
 	entries = make([]string, 0)
 	nowisforever := time.Now().UTC().Format("2006-01-02")
 	superH = hydratables.Hydratable{
@@ -97,8 +101,6 @@ func ProcessIndex(gts string) {
 	var catalog renderables.Catalog
 	json.Unmarshal(bytes, &catalog)
 	schemedEntity := stringify(&catalog.Subjects[0].Entity)
-	fmt.Println(schemedEntity)
-	fmt.Printf("%d", len(catalog.RelationshipSets))
 	rsetMap := catalog.Networks[schemedEntity]
 	for _, slug := range rsetMap {
 		bytes2, err := renderables.MarshalRenderable(slug, &superH)
@@ -107,6 +109,68 @@ func ProcessIndex(gts string) {
 		}
 		dest := path.Join(gts, slug+".json")
 		actions.WriteFile(dest, bytes2)
+		var r renderables.Renderable
+		err = json.Unmarshal(bytes2, &r)
+		if err == nil {
+			for _, indentedLabel := range r.PGrid.IndentedLabels {
+				if card, ok := cards[indentedLabel.Href]; ok {
+					card.PGridMap[slug] = r.RelationshipSet.Title + " | " + r.RelationshipSet.RoleURI
+					cards[indentedLabel.Href] = card
+				}
+			}
+			for _, rootDomain := range r.DGrid.RootDomains {
+				if card, ok := cards[rootDomain.Href]; ok {
+					card.DGridMap[slug] = r.RelationshipSet.Title + " | " + r.RelationshipSet.RoleURI
+					cards[rootDomain.Href] = card
+				}
+				for _, primaryItem := range rootDomain.PrimaryItems {
+					if card, ok := cards[primaryItem.Href]; ok {
+						card.DGridMap[slug] = r.RelationshipSet.Title + " | " + r.RelationshipSet.RoleURI
+						cards[primaryItem.Href] = card
+					}
+				}
+				// for _, effectiveDimension := range rootDomain.EffectiveDimensions {	//todo reassess need
+				// 	if card, ok := cards[effectiveDimension.Href]; ok {
+				// 		card.DGridHashes = append(card.DGridHashes, slug)
+				// 	}
+				// }
+				// for _, edgRow := range rootDomain.EffectiveDomainGrid {
+				// 	for _, edgCell := range edgRow {
+				// 		for _, effectiveMember := range edgCell {
+				// 			if card, ok := cards[effectiveMember.Href]; ok {
+				// 				card.DGridHashes = append(card.DGridHashes, slug)
+				// 			}
+				// 		}
+				// 	}
+				// }
+			}
+			for _, drsNode := range r.DGrid.DRS.Nodes {
+				if card, ok := cards[drsNode.Href]; ok {
+					card.DGridMap[slug] = r.RelationshipSet.Title + " | " + r.RelationshipSet.RoleURI
+					cards[drsNode.Href] = card
+				}
+			}
+			for _, summationItem := range r.CGrid.SummationItems {
+				if card, ok := cards[summationItem.Href]; ok {
+					card.CGridMap[slug] = r.RelationshipSet.Title + " | " + r.RelationshipSet.RoleURI
+					cards[summationItem.Href] = card
+				}
+				for _, contributingConcept := range summationItem.ContributingConcepts {
+					if card, ok := cards[contributingConcept.Href]; ok {
+						card.CGridMap[slug] = r.RelationshipSet.Title + " | " + r.RelationshipSet.RoleURI
+						cards[contributingConcept.Href] = card
+					}
+				}
+			}
+		}
+	}
+	for href, card := range cards {
+		bytes3, err := json.Marshal(card)
+		if err != nil {
+			return
+		}
+		dest := path.Join(gts, url.QueryEscape(href)+".json")
+		actions.WriteFile(dest, bytes3)
 	}
 	dest := path.Join(gts, "_.json")
 	data, _ := json.Marshal(catalog)
@@ -304,5 +368,28 @@ func processSchema(schemaFile *serializables.SchemaFile, entry string) {
 	lock.Lock()
 	superH.Schemas[entry] = *hydratedSchema
 	superH.Folder.Schemas[entry] = *schemaFile
+	lock.Unlock()
+	for _, hydratedElement := range hydratedSchema.Element {
+		processElement(&hydratedElement, entry)
+	}
+}
+
+func processElement(concept *hydratables.Concept, source string) {
+	href := source + "#" + concept.ID
+	card := myrenderables.ConceptCard{
+		Source:            source,
+		ID:                concept.ID,
+		Namespace:         concept.XMLName.Space,
+		Name:              concept.XMLName.Local,
+		SubstitutionGroup: concept.SubstitutionGroup.Local,
+		PeriodType:        concept.PeriodType,
+		ItemType:          concept.Type.Local,
+		BalanceType:       concept.Balance,
+		PGridMap:          make(map[string]string),
+		DGridMap:          make(map[string]string),
+		CGridMap:          make(map[string]string),
+	}
+	lock.Lock()
+	cards[href] = card
 	lock.Unlock()
 }
