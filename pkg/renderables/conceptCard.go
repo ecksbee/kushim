@@ -9,7 +9,7 @@ type ConceptCard struct {
 	PeriodType        string
 	ItemType          string
 	BalanceType       string
-	PGridHashes       []string
-	DGridHashes       []string
-	CGridHashes       []string
+	PGridMap          map[string]string
+	DGridMap          map[string]string
+	CGridMap          map[string]string
 }

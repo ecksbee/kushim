@@ -114,18 +114,18 @@ func ProcessIndex(gts string) {
 		if err == nil {
 			for _, indentedLabel := range r.PGrid.IndentedLabels {
 				if card, ok := cards[indentedLabel.Href]; ok {
-					card.PGridHashes = append(card.PGridHashes, slug)
+					card.PGridMap[slug] = r.RelationshipSet.Title + " | " + r.RelationshipSet.RoleURI
 					cards[indentedLabel.Href] = card
 				}
 			}
 			for _, rootDomain := range r.DGrid.RootDomains {
 				if card, ok := cards[rootDomain.Href]; ok {
-					card.DGridHashes = append(card.DGridHashes, slug)
+					card.DGridMap[slug] = r.RelationshipSet.Title + " | " + r.RelationshipSet.RoleURI
 					cards[rootDomain.Href] = card
 				}
 				for _, primaryItem := range rootDomain.PrimaryItems {
 					if card, ok := cards[primaryItem.Href]; ok {
-						card.DGridHashes = append(card.DGridHashes, slug)
+						card.DGridMap[slug] = r.RelationshipSet.Title + " | " + r.RelationshipSet.RoleURI
 						cards[primaryItem.Href] = card
 					}
 				}
@@ -146,18 +146,18 @@ func ProcessIndex(gts string) {
 			}
 			for _, drsNode := range r.DGrid.DRS.Nodes {
 				if card, ok := cards[drsNode.Href]; ok {
-					card.DGridHashes = append(card.DGridHashes, slug)
+					card.DGridMap[slug] = r.RelationshipSet.Title + " | " + r.RelationshipSet.RoleURI
 					cards[drsNode.Href] = card
 				}
 			}
 			for _, summationItem := range r.CGrid.SummationItems {
 				if card, ok := cards[summationItem.Href]; ok {
-					card.CGridHashes = append(card.CGridHashes, slug)
+					card.CGridMap[slug] = r.RelationshipSet.Title + " | " + r.RelationshipSet.RoleURI
 					cards[summationItem.Href] = card
 				}
 				for _, contributingConcept := range summationItem.ContributingConcepts {
 					if card, ok := cards[contributingConcept.Href]; ok {
-						card.CGridHashes = append(card.CGridHashes, slug)
+						card.CGridMap[slug] = r.RelationshipSet.Title + " | " + r.RelationshipSet.RoleURI
 						cards[contributingConcept.Href] = card
 					}
 				}
@@ -385,9 +385,9 @@ func processElement(concept *hydratables.Concept, source string) {
 		PeriodType:        concept.PeriodType,
 		ItemType:          concept.Type.Local,
 		BalanceType:       concept.Balance,
-		PGridHashes:       make([]string, 0),
-		DGridHashes:       make([]string, 0),
-		CGridHashes:       make([]string, 0),
+		PGridMap:          make(map[string]string),
+		DGridMap:          make(map[string]string),
+		CGridMap:          make(map[string]string),
 	}
 	lock.Lock()
 	cards[href] = card
