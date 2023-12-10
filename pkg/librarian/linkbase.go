@@ -274,6 +274,8 @@ func rerouteLocs(oldLocs []hydratables.Loc, entry string, myFilepath string) []h
 				continue
 			}
 			newBase := path.Join(dir, base)
+			newBase = strings.Replace(newBase, "https:/", "https://", -1)
+			newBase = strings.Replace(newBase, "http:/", "http://", -1)
 			newHref = newBase + "#" + fragment
 		}
 		ret[i] = hydratables.Loc{

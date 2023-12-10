@@ -109,6 +109,60 @@ func ProcessIndex(gts string) {
 		}
 		dest := path.Join(gts, slug+".json")
 		actions.WriteFile(dest, bytes2)
+		var r renderables.Renderable
+		err = json.Unmarshal(bytes2, &r)
+		if err == nil {
+			for _, indentedLabel := range r.PGrid.IndentedLabels {
+				if card, ok := cards[indentedLabel.Href]; ok {
+					card.PGridHashes = append(card.PGridHashes, slug)
+					cards[indentedLabel.Href] = card
+				}
+			}
+			for _, rootDomain := range r.DGrid.RootDomains {
+				if card, ok := cards[rootDomain.Href]; ok {
+					card.DGridHashes = append(card.DGridHashes, slug)
+					cards[rootDomain.Href] = card
+				}
+				for _, primaryItem := range rootDomain.PrimaryItems {
+					if card, ok := cards[primaryItem.Href]; ok {
+						card.DGridHashes = append(card.DGridHashes, slug)
+						cards[primaryItem.Href] = card
+					}
+				}
+				// for _, effectiveDimension := range rootDomain.EffectiveDimensions {	//todo reassess need
+				// 	if card, ok := cards[effectiveDimension.Href]; ok {
+				// 		card.DGridHashes = append(card.DGridHashes, slug)
+				// 	}
+				// }
+				// for _, edgRow := range rootDomain.EffectiveDomainGrid {
+				// 	for _, edgCell := range edgRow {
+				// 		for _, effectiveMember := range edgCell {
+				// 			if card, ok := cards[effectiveMember.Href]; ok {
+				// 				card.DGridHashes = append(card.DGridHashes, slug)
+				// 			}
+				// 		}
+				// 	}
+				// }
+			}
+			for _, drsNode := range r.DGrid.DRS.Nodes {
+				if card, ok := cards[drsNode.Href]; ok {
+					card.DGridHashes = append(card.DGridHashes, slug)
+					cards[drsNode.Href] = card
+				}
+			}
+			for _, summationItem := range r.CGrid.SummationItems {
+				if card, ok := cards[summationItem.Href]; ok {
+					card.CGridHashes = append(card.CGridHashes, slug)
+					cards[summationItem.Href] = card
+				}
+				for _, contributingConcept := range summationItem.ContributingConcepts {
+					if card, ok := cards[contributingConcept.Href]; ok {
+						card.CGridHashes = append(card.CGridHashes, slug)
+						cards[contributingConcept.Href] = card
+					}
+				}
+			}
+		}
 	}
 	for href, card := range cards {
 		bytes3, err := json.Marshal(card)
@@ -331,6 +385,9 @@ func processElement(concept *hydratables.Concept, source string) {
 		PeriodType:        concept.PeriodType,
 		ItemType:          concept.Type.Local,
 		BalanceType:       concept.Balance,
+		PGridHashes:       make([]string, 0),
+		DGridHashes:       make([]string, 0),
+		CGridHashes:       make([]string, 0),
 	}
 	lock.Lock()
 	cards[href] = card
